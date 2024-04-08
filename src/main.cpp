@@ -54,6 +54,23 @@ std::vector<Token> tokenize(const std::string &source) {
     return tokens;
 }
 
+std::string genASM(const std::vector<Token> tokens) {
+    std::stringstream buffer;
+    buffer << "global _start\n_start:\n";
+
+    for (int i = 0; i < tokens.size(); i++) {
+        if (tokens[i].type == TokenType::RETURN) {
+            buffer << "\tmov eax, 60\n";
+            i++;
+            buffer << "\tmov edi, " << tokens[i].value.value() << "\n";
+        } else if (tokens[i].type == TokenType::SEMI) {
+            buffer << "\tsyscall\n";
+        }
+    }
+
+    return buffer.str();
+}
+
 int main(int argc, char **argv) {
     // Check if the user has provided a file to compile
     if (argc < 2) {
@@ -69,9 +86,18 @@ int main(int argc, char **argv) {
 
     // Tokenize the contents
     std::vector<Token> tokens = tokenize(buffer.str());
-    std::cout << buffer.str() << "Hello";
-    // Parse the tokens into ASM
+
     // Write the ASM to a file
+    std::string instructions = genASM(tokens);
+    {
+        std::ofstream file("main.asm");
+        file << instructions.c_str();
+        file.close();
+    }
+
+    // Compile assembly
+    system("nasm -felf64 main.asm");
+    system("ld main.o -o main");
 
     exit(EXIT_SUCCESS);
 }
